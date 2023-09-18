@@ -76,9 +76,10 @@ vi.mock("@/hooks/useDynamicSvgImport", () => ({
 
 /**
  * 1. 先測 render 是否成功
- * 2. 測試 input change
- * 3. 測試 onClick clear button
- * 4. 最後測試 => 參數 onSearch
+ * 2. initialInputValue 是否正確
+ * 3. 測試 input change
+ * 4. 測試 onClick clear button
+ * 5. 最後測試 => 參數 onSearch
  */
 describe("SearchMembers Component", () => {
   const { getByPlaceholderText, getByText, getByTestId } = screen;
