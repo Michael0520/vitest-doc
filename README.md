@@ -1,8 +1,8 @@
 # Vitest Doc
 
-[**Live Demo →**](https://nextra-docs-template.vercel.app)
+[**Live Demo →**](https://vitest-doc.vercel.app/)
 
-[![](.github/screenshot.png)](https://nextra-docs-template.vercel.app)
+![website-screenshot](/images/index/website-screenshot.png)
 
 ## Local Development
 
