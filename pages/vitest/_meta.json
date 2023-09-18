@@ -4,5 +4,6 @@
     "03_function": "函數組件",
     "04_ui": "UI組件",
     "05_event": "事件",
-    "06_mockSever": "Mock Server"
+    "06_mockSever": "Mock Server",
+    "07_GUI": "GUI"
 }
