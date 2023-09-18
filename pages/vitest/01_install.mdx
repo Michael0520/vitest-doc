@@ -1,0 +1,67 @@
+## 使用 npm 安裝 Vitest
+
+首先，使用以下命令安裝 Vitest。
+
+```bash
+npm install -D vitest
+```
+
+設定 React Testing Library 與 Vitest
+安裝必要的測試庫與工具。
+
+```bash
+npm install --save-dev vitest jsdom
+npm install --save-dev @testing-library/react @testing-library/jest-dom
+```
+
+### 新增 NPM 腳本
+
+在 package.json 中，添加一個用於執行測試的腳本。
+
+```json
+{
+  "scripts": {
+    "test": "vitest"
+  }
+}
+```
+
+## 調整 TypeScript 設定
+
+在 tsconfig.json 中添加 Vitest 的全局型別。
+
+```json
+{
+  "compilerOptions": {
+    "types": ["vitest/globals"]
+  }
+}
+```
+
+## 建立測試初始化檔
+
+在 ./src/test/setup.ts 中，導入 React Testing Library 提供的擴充功能。
+
+```ts
+import "@testing-library/jest-dom";
+```
+
+## 調整 Vite 設定檔
+
+最後，在 vite.config.ts 文件中設定測試環境和初始化檔案。
+
+```ts
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { resolve } from "path";
+
+export default defineConfig({
+  test: {
+    globals: true, // 自動導入 Jest API
+    environment: "jsdom",
+    setupFiles: resolve(__dirname, "src/test/setup.ts"),
+  },
+});
+```
+
+這樣你就完成了 Vite 和 React Testing Library 的基本設定，現在你可以開始寫測試了。

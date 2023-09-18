@@ -1,0 +1,44 @@
+## Pure Function
+
+純函式（Pure Function）是一種輸出完全依賴於輸入的函式，不會產生副作用。在純函式內，相同的輸入會產生相同的輸出。
+
+### 純函式的測試
+
+測試純函式通常比測試有副作用的函式來得簡單，因為你只需關注輸入和輸出。以下我們以加總函式 sum 為例。
+
+### 加總函式（sum function）的開發與測試
+
+sum 函式的主要目的是將兩個數字相加。因此，我們的測試應該確保在不同情況下，這個函式能正確地執行加法。
+
+```tsx
+// utils/sum.ts
+export function sum(a: number, b: number): number {
+  return a + b;
+}
+```
+
+```tsx
+// utils/sum.test.ts
+import { sum } from "@/utils/sum";
+
+describe("sum 函式的測試", () => {
+  test("應正確處理兩個整數的加法", () => {
+    expect(sum(1, 2)).toBe(3);
+    expect(sum(-1, 1)).toBe(0);
+    expect(sum(0, 0)).toBe(0);
+  });
+
+  test("應正確處理包含小數的數字", () => {
+    expect(sum(1.2, 1.8)).toBeCloseTo(3);
+    expect(sum(-1.1, 1.1)).toBeCloseTo(0);
+  });
+});
+```
+
+### 測試案例的選擇
+
+在選擇測試案例時，我們應該考慮以下幾個因素：
+
+1. 正常情況：最常見的使用情況。
+2. 邊界情況：例如，測試極小或極大的數字。
+3. 特殊值：例如，測試輸入為 0 或負數。

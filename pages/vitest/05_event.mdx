@@ -1,0 +1,149 @@
+## 模擬用戶事件（Mocking User Events）
+
+在這個部分，我們使用 fireEvent 來模擬用戶事件。以下是一個範例：
+
+```tsx
+// CustomAvatar.test.ts
+import { render, fireEvent } from "@testing-library/react";
+import CustomAvatar from "./CustomAvatar";
+
+describe("CustomAvatar 元件", () => {
+  test("應正確處理點擊事件", () => {
+    const mockFn = vi.fn();
+    const { getByTestId } = render(<CustomAvatar onClick={mockFn} />);
+    const avatarElement = getByTestId("custom-avatar");
+
+    // 模擬點擊事件
+    fireEvent.click(avatarElement);
+
+    // 斷言
+    expect(mockFn).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+測試步驟如下：
+
+1. 使用 Vitest 的 `vi.fn()` 創建一個模擬函數（mock function）。
+2. 使用 render 函式渲染 CustomAvatar 元件，並傳入模擬函數作為 onClick 屬性。
+3. 用 getByTestId 找到帶有 `data-testid="custom-avatar"` 的元素。
+4. 使用 `fireEvent.click` 模擬點擊事件
+5. 使用 expect 斷言檢查模擬函數是否被調用了一次。
+
+---
+
+### 選擇測試對象
+
+為什麼選擇 SearchMembers 元件？
+
+1. 用戶交互多元：包括用戶輸入和點擊事件。
+2. 功能完整性：除了基本的搜索功能外，還有清空輸入框的需求。
+3. 環境設置
+
+### Mock useDynamicSvgImport Hook
+
+這個元件使用了 useDynamicSvgImport 這個 hook，該 hook 會使用到全局的 window 對象。為避免 "window is not defined" 的錯誤，需要先 Mock 這個 hook。
+
+```tsx
+vi.mock("@/hooks/useDynamicSvgImport", () => ({
+  useDynamicSvgImport: vi.fn().mockReturnValue({ SvgIcon: () => null }),
+}));
+```
+
+### 測試流程
+
+主要分為五個測試：
+
+1. 確認渲染正確性：測試是否能正確渲染 input 和 button。
+2. 驗證初始值：檢查 input 欄位的初始值是否設定正確。
+3. 測試輸入變化：模擬用戶輸入，並確認 input 值的變化。
+4. 測試清空功能：模擬點擊清除按鈕，並確認 input 欄位能被正確清空。
+5. 測試搜索動作：模擬點擊搜索按鈕，並確認 onSearch 方法能被正確調用。
+
+### 完整測試代碼
+
+以下是對 SearchMembers 元件的完整測試代碼：
+
+```tsx
+import { render, screen, fireEvent } from "@testing-library/react";
+import SearchMembers from "./SearchMembers";
+
+// `useDynamicSvgImport` 進行了動態導入 SVG，動態導入的會使用到 `window`。
+// 所以需要進行 Mock，以避免在 Vitest 環境中出現 "window is not defined" 的錯誤。
+vi.mock("@/hooks/useDynamicSvgImport", () => ({
+  useDynamicSvgImport: vi.fn().mockReturnValue({ SvgIcon: () => null }),
+}));
+
+/**
+ * 1. 先測 render 是否成功
+ * 2. 測試 input change
+ * 3. 測試 onClick clear button
+ * 4. 最後測試 => 參數 onSearch
+ */
+describe("SearchMembers Component", () => {
+  const { getByPlaceholderText, getByText, getByTestId } = screen;
+
+  const mockOnSearch = vi.fn();
+  const mockClearInput = vi.fn();
+
+  const initComponent = (initialValue: string = "") => (
+    <SearchMembers
+      isSearchLoading={false}
+      onSearch={mockOnSearch}
+      onClearInput={mockClearInput}
+      initialInputValue={initialValue}
+    />
+  );
+
+  beforeEach(() => {
+    render(initComponent("Initial Value"));
+  });
+
+  test("renders the input and button correctly", () => {
+    expect(getByPlaceholderText("Search Members")).toBeInTheDocument();
+    expect(getByText("Search")).toBeInTheDocument();
+  });
+
+  test("checks if initialInputValue is set correctly", () => {
+    const input = getByPlaceholderText("Search Members") as HTMLInputElement;
+
+    expect(input.value).toBe("Initial Value");
+  });
+
+  test("handles input value change", () => {
+    const input = getByTestId("search-input") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "Michael" } });
+    // 可以 console.log 出當前的內容用這個方式
+    // console.log((input as HTMLInputElement).value);
+    expect(input).toHaveValue("Michael");
+  });
+
+  test("click clear button to clear input value", () => {
+    const input = getByPlaceholderText("Search Members") as HTMLInputElement;
+    const clearButton = getByTestId("clear-button");
+
+    fireEvent.change(input, { target: { value: "Michael" } });
+
+    // 確認 input 初始值是 "Michael"
+    expect(input).toHaveValue("Michael");
+
+    fireEvent.click(clearButton);
+
+    // 確認 onClearInput 函數被調用了一次
+    expect(mockClearInput).toHaveBeenCalledTimes(1);
+
+    // 確認 input 的值觸發 button 後會是空的
+    expect(input).toHaveValue("");
+  });
+
+  test("calls onSearch when Search button is clicked", () => {
+    const input = getByTestId("search-input") as HTMLInputElement;
+    const searchButton = getByTestId("search-button");
+
+    fireEvent.change(input, { target: { value: "Michael" } });
+    fireEvent.click(searchButton);
+
+    expect(mockOnSearch).toHaveBeenCalledWith("Michael");
+  });
+});
+```
