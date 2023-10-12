@@ -5,5 +5,7 @@
     "04_ui": "UI組件",
     "05_event": "事件",
     "06_mockSever": "Mock Server",
-    "07_GUI": "GUI"
+    "07_GUI": "GUI",
+    "08_Hook": "Hook",
+    "09_converage": "Converage"
 }

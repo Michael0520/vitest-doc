@@ -1,0 +1,145 @@
+# React Hook
+
+## `useCounter custom hook`
+
+這個 hook 是用來做常用的新增、減少的 hook，最後會傳出（狀態、新增函示、減少函示、回到預設值函示）
+
+```js
+import { useState } from "react";
+
+const useCounter = (initialValue = 0, step = 1) => {
+  const [count, setCount] = useState(initialValue);
+
+  const increment = () => setCount((prevCount) => prevCount + step);
+  const decrement = () => setCount((prevCount) => prevCount - step);
+  const reset = () => setCount(initialValue);
+
+  return { count, increment, decrement, reset };
+};
+
+export default useCounter;
+```
+
+## act 是什麼？
+
+act 是 React 測試庫中的一個函數，用於包裹會對組件狀態造成變化的代碼。它確保所有與 React 狀態更新和渲染相關的活動都在它的回調函數內完成。
+
+### 為什麼使用 act？
+
+在實際環境中，React 的狀態更新和重新渲染是自動發生的。
+但在測試環境中，這些不會自動發生，因此需要手動觸發，使用 act 可以確保所有的狀態更新和重新渲染都能按預期執行。
+
+```js
+import { act } from "react-dom/test-utils";
+import { renderHook } from "@testing-library/react-hooks";
+import useCounter from "./useCounter";
+
+test("should increment counter", () => {
+  const { result } = renderHook(() => useCounter());
+
+  act(() => {
+    result.current.increment();
+  });
+
+  expect(result.current.count).toBe(1);
+});
+
+test("should decrement counter", () => {
+  const { result } = renderHook(() => useCounter());
+
+  act(() => {
+    result.current.decrement();
+  });
+
+  expect(result.current.count).toBe(-1);
+});
+
+test("should reset counter", () => {
+  const { result } = renderHook(() => useCounter(5));
+
+  act(() => {
+    result.current.reset();
+  });
+
+  expect(result.current.count).toBe(5);
+});
+```
+
+---
+
+## useDebounce custom hook
+
+這個 hook 是用於實現防抖功能，在一段時間後才真正執行操作，用於減少效能的耗費。
+
+```js
+import { useEffect, useState } from "react";
+
+export function useDebounce<T>(value: T, delay = 500): T {
+  const [debouncedValue, setDebouncedValue] = useState < T > value;
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay || 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+```
+
+由於 useDebounce 依賴於計時器，因此在測試過程中，我們需要模擬計時器的行為，這裡使 vi.useFakeTimers() 來模擬。
+
+- `advanceAndExpect` : 這是一個輔助函數，用於模擬計時器前進特定的時間，並檢查預期的值是否出現在文檔中。
+- `vi.advanceTimersByTime` : 這個 Vite 函數可以模擬計時器前進，達到觸發 useDebounce 中的 setTimeout
+
+```tsx
+import { render, act } from "@testing-library/react";
+import React from "react";
+import { useDebounce } from "./useDebounce";
+
+const TestComponent: React.FC<{ value: string; delay: number }> = ({
+  value,
+  delay,
+}) => {
+  const debouncedValue = useDebounce(value, delay);
+
+  return <div>{debouncedValue}</div>;
+};
+
+describe("useDebounce", () => {
+  beforeEach(() => {
+    vi.useFakeTimers(); // 使用 vite 的假計時器
+  });
+
+  afterEach(() => {
+    vi.useRealTimers(); // 恢復真實計時器
+  });
+
+  test("should update the debounced value after the specified delay", () => {
+    const { rerender, getByText } = render(
+      <TestComponent value="initial" delay={500} />
+    );
+
+    const advanceAndExpect = (time: number, value: string) => {
+      act(() => {
+        vi.advanceTimersByTime(time); // 模擬計時器前進
+      });
+      expect(getByText(value)).toBeInTheDocument();
+    };
+
+    // 初始值應該立即被呈現
+    advanceAndExpect(0, "initial");
+
+    // 更新 value，並等待 debounce 時間
+    rerender(<TestComponent value="updated" delay={500} />);
+
+    // 499ms 時，value 應該還是 "initial"
+    advanceAndExpect(499, "initial");
+
+    // 500ms 時，value 應該更新為 "updated"
+    advanceAndExpect(1, "updated");
+  });
+});
+```
