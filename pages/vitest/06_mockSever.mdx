@@ -1,3 +1,206 @@
-## Mock Sever
+# Mock Sever
 
-WIP...
+## 與 mock api 差異點
+
+MSW（Mock Service Worker）與 Vite Mock 主要的區別在於 HTTP 請求的處理。
+
+- MSW
+  - 實際發送 HTTP 請求。
+  - 使用 Service Worker API 攔截請求，並回傳自定義的 API 回應。
+- Vite Mock
+  - 不會實際發送 HTTP 請求。
+  - 通常模擬如 axios 的請求函數。
+
+MSW 安裝與設定
+
+- 安裝 MSW
+
+```bash
+npm install msw --save-dev
+```
+
+- 新增資料夾與檔案
+
+```bash
+mkdir src/test/mocks
+touch src/test/mocks/handlers.ts
+touch src/test/mocks/server.ts
+```
+
+- 設置 Handlers
+
+  於 get 方法中帶入 API 路徑，並取出參數 res(response) 函式設定回傳值
+
+  - ctx.status 設定 HTTP 狀態
+  - ctx.json 設定 json 格式的回傳值
+
+```javascript
+import { getUserProfileResponse } from "@/types/userProfile";
+import { rest } from "msw";
+
+export const handlers = [
+  rest.get("v1/me", (_req, res, ctx) => {
+    return res(
+      ctx.status(200),
+      // response 可以加入 API Response 型別，就可以在這裡塞入假資料時，也在驗證假資料的格式
+      ctx.json <
+        getUserProfileResponse >
+        {
+          id: 10,
+          nickname: "example_nickname",
+          phone: "example_phone",
+          email: "example_email",
+          avatar_url: "example_avatar_url",
+        }
+    );
+  }),
+];
+```
+
+MSW 與 Vitest 的整合
+
+- 將 API 模擬測試設置於 Vite setup 上
+
+```javascript
+// src/test/setup.ts
+import "@testing-library/jest-dom";
+import { beforeAll, afterEach, afterAll } from "vitest";
+import { server } from "./msw/sever";
+
+// Establish API mocking before all tests.
+beforeAll(() => server.listen());
+
+// Reset any request handlers that we may add during the tests,
+// so they don't affect other tests.
+afterEach(() => server.resetHandlers());
+
+// Clean up after the tests are finished.
+afterAll(() => server.close());
+```
+
+- 新增測試專用的 react-query provider
+  - 使用 createQueryProviderWrapper 封裝。
+
+```javascript
+import {
+  QueryClient,
+  QueryClientConfig,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import React from "react";
+
+type QueryProviderWrapperProps = {
+  children: React.ReactNode,
+};
+
+export const createQueryProviderWrapper = (config: QueryClientConfig = {}) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+    logger: {
+      log: console.log,
+      warn: console.warn,
+      error: () => null,
+    },
+    ...config,
+  });
+
+  return ({ children }: QueryProviderWrapperProps) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+};
+```
+
+- 開始實作測試
+  - 使用 waitFor 函數以處理 API 回應的異步性。
+
+切記需要取得 API 回傳後的資料，都必須在 waitFor 內去使用，外層取得的話，都會是 API 回傳前的狀態或是資料
+
+```javascript
+import { getUserProfileAPI } from "@/api/userProfile";
+import { createQueryProviderWrapper } from "@/test/index";
+import { useQuery } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+
+const useGetUserProfileAPIQuery = () => {
+  return useQuery(["tokenKey"], getUserProfileAPI);
+};
+const setupHook = () => {
+  return renderHook(() => useGetUserProfileAPIQuery(), {
+    wrapper: createQueryProviderWrapper(),
+  });
+};
+
+describe("useGetUserProfileAPIQuery", () => {
+  test("should fetch user profile and have correct nickname", async () => {
+    const { result } = setupHook();
+
+    await waitFor(() => {
+      const { data } = result.current;
+
+      console.log(data);
+      expect(data).toBeDefined();
+
+      if (data) {
+        expect(data.nickname).toBe("example_nickname");
+      } else {
+        throw new Error("data should be defined");
+      }
+    });
+  });
+});
+```
+
+可以看到成功獲得此 API 預期回覆的 output
+
+![image](@img/06/01.png)
+
+如果想要測試如果 API 500 or 其他失敗狀態的話，預期要 output 什麼事情，這裡可以這樣寫
+
+```javascript
+import { getUserProfileAPI } from "@/api/userProfile";
+import { createQueryProviderWrapper } from "@/test/index";
+import { server } from "@/test/msw/sever";
+import { useQuery } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import { rest } from "msw";
+
+const useGetUserProfileAPIQuery = () => {
+return useQuery(["tokenKey"], getUserProfileAPI);
+};
+
+const setupHook = () => {
+return renderHook(() => useGetUserProfileAPIQuery(), {
+wrapper: createQueryProviderWrapper(),
+});
+};
+
+describe("useGetUserProfileAPIQuery", () => {
+test("should fetch user profile and have correct nickname", async () => {
+...
+});
+test("failure query hook", async () => {
+server.use(
+rest.get("\*", (\_req, res, ctx) => {
+return res(ctx.status(500));
+}),
+);
+const { result } = setupHook();
+
+    await waitFor(() => {
+      const { isError } = result.current;
+      expect(isError).toBe(true);
+    });
+
+});
+});
+```
+
+---
+
+## 參考資源
+
+這篇內容是參考作者的實作 : https://github.com/TkDodo/testing-react-query/tree/main

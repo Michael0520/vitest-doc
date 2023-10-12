@@ -1,0 +1,94 @@
+# Code Coverage (v8)
+
+## 簡介
+
+程式碼覆蓋率（Code Coverage）表示您的測試涵蓋主程式的百分比。查看覆蓋率的主要目的是「**檢視自己有沒有值得寫而尚未寫的測試**」。
+
+### 使用工具：V8
+
+覆蓋率工具使用的是 `vitest` 預設的 `v8`。另外也有 `istanbul`，但由於沒有找到兩者區別的詳細資料，所以使用了預設的 `v8`。
+
+## 安裝
+
+```bash
+npm i -D @vitest/coverage-v8
+```
+
+## 設定 Vite Config
+
+```typescript
+// vite.config.ts
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: "v8", // or 'istanbul'
+    },
+  },
+});
+```
+
+## 新增 Script
+
+```json
+{
+  "scripts": {
+    "test": "vitest",
+    "coverage": "vitest run --coverage"
+  }
+}
+```
+
+## 執行
+
+執行 `npm run coverage` 以查看覆蓋率報告。
+
+### 覆蓋率報告類型
+
+- **行數覆蓋率（Line Coverage）**
+- **函式覆蓋率（Function Coverage）**
+- **分枝覆蓋率（Branch Coverage）**
+- **語句覆蓋率（Statement Coverage）**
+
+## 自訂報告格式
+
+如果您想要不同的報告格式，您可以在 `config.js` 設定 `coverage.reporter`：
+
+```javascript
+// vite.config.js or vitest.config.js
+export default defineConfig({
+  test: {
+    coverage: {
+      reporter: ["text", "json", "html"],
+    },
+  },
+});
+```
+
+### V8 提供的報告選項
+
+- **Text**: 在終端機中呈現
+- **JSON**: 以 JSON 格式產生
+- **HTML**: 產生一個可互動的 HTML 報告
+
+## Vitest GUI 整合
+
+Vitest GUI 已整合了 HTML 互動覆蓋率報告，直接在界面中查看。
+
+### 新增設定
+
+```javascript
+// vite.config.js
+export default defineConfig({
+  test: {
+    coverage: {
+      enabled: true, // show in the vitest ui dashboard
+    },
+  },
+});
+```
+
+## 結論
+
+覆蓋率不需要達到 100%。主要是檢視是否有未寫的值得寫的測試，並儘量將其補齊。目標可以是 70% 或更高，但不需要過度追求。
